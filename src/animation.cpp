@@ -82,35 +82,35 @@ void updateScene(float t, vec3* vertices, vec3* normals, std::vector<Particle>& 
 	}
 	std::cout<<"Gravity applied!\n";
 	// apply spring forces
-	for (const Spring& spring : springs) {
-		const Particle& particle1 = particles[spring.particle1];
-		const Particle& particle2 = particles[spring.particle2];
-		std::cout << "1\n";
-		// Calculate the direction and distance between the particles
-		glm::vec3 direction = particle2.position - particle1.position;
-		float distance = glm::length(direction);
-		std::cout << "2\n";
+	// for (const Spring& spring : springs) {
+	// 	const Particle& particle1 = particles[spring.particle1];
+	// 	const Particle& particle2 = particles[spring.particle2];
+	// 	std::cout << "1\n";
+	// 	// Calculate the direction and distance between the particles
+	// 	glm::vec3 direction = particle2.position - particle1.position;
+	// 	float distance = glm::length(direction);
+	// 	std::cout << "2\n";
 
-		// Calculate the spring force
-		glm::vec3 force = -spring.stiffness * (distance - spring.restLength) * glm::normalize(direction);
-		std::cout << "3\n";
+	// 	// Calculate the spring force
+	// 	glm::vec3 force = -spring.stiffness * (distance - spring.restLength) * glm::normalize(direction);
+	// 	std::cout << "3\n";
 
-		// Apply the spring force to both particles
-		particles[spring.particle1].force += force;
-		particles[spring.particle2].force -= force;
-		std::cout << "4\n";
+	// 	// Apply the spring force to both particles
+	// 	particles[spring.particle1].force += force;
+	// 	particles[spring.particle2].force -= force;
+	// 	std::cout << "4\n";
 
-		// Apply damping force
-		glm::vec3 relativeVelocity = particle2.velocity - particle1.velocity;
-		glm::vec3 dampingForce = -spring.damping * glm::dot(relativeVelocity, direction) / distance * glm::normalize(direction);
-		std::cout << "5\n";
+	// 	// Apply damping force
+	// 	glm::vec3 relativeVelocity = particle2.velocity - particle1.velocity;
+	// 	glm::vec3 dampingForce = -spring.damping * glm::dot(relativeVelocity, direction) / distance * glm::normalize(direction);
+	// 	std::cout << "5\n";
 
-		// Apply the damping force to both particles
-		particles[spring.particle1].force += dampingForce;
-		particles[spring.particle2].force -= dampingForce;
-		std::cout << "6\n";
+	// 	// Apply the damping force to both particles
+	// 	particles[spring.particle1].force += dampingForce;
+	// 	particles[spring.particle2].force -= dampingForce;
+	// 	std::cout << "6\n";
 
-	}
+	// }
 	std::cout<<"Spring forces applied!\n";
 
 	// update position and velocity (according to t) and set force = 0
@@ -122,6 +122,7 @@ void updateScene(float t, vec3* vertices, vec3* normals, std::vector<Particle>& 
 			// Reset force to zero
 			particles[i].force = glm::vec3(0.0f);
 		}
+		else std::cout << "Particle " << i << " is fixed\n";
 	}
 	std::cout<<"Positions and Velocities updated!\n";
 
@@ -187,6 +188,8 @@ std::vector<Spring> setSprings(std::vector<Particle> &particles, int numParticle
 			}
 		}
 	}
+	std::cout<<"Structural springs set!\n";
+	std::cout<<"Number of springs: "<<springs.size()<<std::endl;
 	for (int i = 0; i < numParticlesX - 1; i++) {
 		for (int j = 0; j < numParticlesY - 1; j++) {
 			Spring spring1;
@@ -206,26 +209,31 @@ std::vector<Spring> setSprings(std::vector<Particle> &particles, int numParticle
 			springs.push_back(spring2);
 		}
 	}
-	for (int i = 0; i < numParticlesX - 2; i++) {
-		for (int j = 0; j < numParticlesY - 2; j++) {
-			Spring spring1;
-			spring1.particle1 = i * numParticlesY + j;
-			spring1.particle2 = (i + 2) * numParticlesY + j;
-			spring1.restLength = 2 * width / (numParticlesX - 1);
-			spring1.stiffness = bendingStiffness;
-			spring1.damping = 0.1f * bendingStiffness;
-			springs.push_back(spring1);
-
-			Spring spring2;
-			spring2.particle1 = i * numParticlesY + j;
-			spring2.particle2 = i * numParticlesY + (j + 2);
-			spring2.restLength = 2 * height / (numParticlesY - 1);
-			spring2.stiffness = bendingStiffness;
-			spring2.damping = 0.1f * bendingStiffness;
-			springs.push_back(spring2);
+	std::cout<<"Number of springs: "<<springs.size()<<std::endl;
+	for (int i = 0; i < numParticlesX; i++) {
+		for (int j = 0; j < numParticlesY; j++) {
+			if (i < numParticlesX - 2) {
+				Spring spring;
+				spring.particle1 = i * numParticlesY + j;
+				spring.particle2 = (i + 2) * numParticlesY + j;
+				spring.restLength = 2 * width / (numParticlesX - 1);
+				spring.stiffness = bendingStiffness;
+				spring.damping = 0.1f * bendingStiffness;
+				springs.push_back(spring);
+			}
+			if (j < numParticlesY - 2) {
+				Spring spring;
+				spring.particle1 = i * numParticlesY + j;
+				spring.particle2 = i * numParticlesY + (j + 2);
+				spring.restLength = 2 * height / (numParticlesY - 1);
+				spring.stiffness = bendingStiffness;
+				spring.damping = 0.1f * bendingStiffness;
+				springs.push_back(spring);
+			}
 		}
 	}
-
+	std::cout<<"Springs set!\n";
+	std::cout<<"Number of springs: "<<springs.size()<<std::endl;
 	
 
 	return springs;
@@ -294,9 +302,9 @@ int main() {
         float t = 1e-3;
 		updateScene(t, vertices, normals, particles, springs, numParticlesX, numParticlesY);
 		// print vertices
-		for (int i = 0; i < nv; i++) {
-			std::cout << "Vertex " << i << " position: " << vertices[i].x << " " << vertices[i].y << " " << vertices[i].z << std::endl;
-		}
+		// for (int i = 0; i < nv; i++) {
+		// 	std::cout << "Vertex " << i << " position: " << vertices[i].x << " " << vertices[i].y << " " << vertices[i].z << std::endl;
+		// }
 
 		camCtl.update();
 		Camera &camera = camCtl.camera;
