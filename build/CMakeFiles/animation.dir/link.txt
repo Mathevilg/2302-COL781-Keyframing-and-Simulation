@@ -1,0 +1,1 @@
+/usr/bin/c++ -rdynamic CMakeFiles/animation.dir/src/animation.cpp.o -o animation   -L/usr/local/lib  -Wl,-rpath,/usr/local/lib libcol781.a /usr/lib/x86_64-linux-gnu/libGL.so /usr/local/lib/libSDL2.so 
