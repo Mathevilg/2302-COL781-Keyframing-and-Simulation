@@ -82,35 +82,36 @@ void updateScene(float t, vec3* vertices, vec3* normals, std::vector<Particle>& 
 	}
 	std::cout<<"Gravity applied!\n";
 	// apply spring forces
-	// for (const Spring& spring : springs) {
-	// 	const Particle& particle1 = particles[spring.particle1];
-	// 	const Particle& particle2 = particles[spring.particle2];
-	// 	std::cout << "1\n";
-	// 	// Calculate the direction and distance between the particles
-	// 	glm::vec3 direction = particle2.position - particle1.position;
-	// 	float distance = glm::length(direction);
-	// 	std::cout << "2\n";
+	for (const Spring& spring : springs) {
+		const Particle& particle1 = particles[spring.particle1];
+		const Particle& particle2 = particles[spring.particle2];
+		std::cout << "1\n";
+		// Calculate the direction and distance between the particles
+		glm::vec3 direction = particle2.position - particle1.position;
+		float distance = glm::length(direction);
+		std::cout << "2\n";
 
-	// 	// Calculate the spring force
-	// 	glm::vec3 force = -spring.stiffness * (distance - spring.restLength) * glm::normalize(direction);
-	// 	std::cout << "3\n";
+		// Calculate the spring force
+		glm::vec3 force = -spring.stiffness * (distance - spring.restLength) * glm::normalize(direction);
+		std::cout << "3\n";
+		std::cout << "distance: " << distance << "\n";
+		std::cout << "restLength: " << spring.restLength << "\n";
+		// Apply the spring force to both particles
+		particles[spring.particle1].force -= force;
+		particles[spring.particle2].force += force;
+		std::cout << "4\n";
 
-	// 	// Apply the spring force to both particles
-	// 	particles[spring.particle1].force += force;
-	// 	particles[spring.particle2].force -= force;
-	// 	std::cout << "4\n";
+		// Apply damping force
+		glm::vec3 relativeVelocity = particle2.velocity - particle1.velocity;
+		glm::vec3 dampingForce = -spring.damping * glm::dot(relativeVelocity, direction) / distance * glm::normalize(direction);
+		std::cout << "5\n";
 
-	// 	// Apply damping force
-	// 	glm::vec3 relativeVelocity = particle2.velocity - particle1.velocity;
-	// 	glm::vec3 dampingForce = -spring.damping * glm::dot(relativeVelocity, direction) / distance * glm::normalize(direction);
-	// 	std::cout << "5\n";
+		// Apply the damping force to both particles
+		particles[spring.particle1].force -= dampingForce;
+		particles[spring.particle2].force += dampingForce;
+		std::cout << "6\n";
 
-	// 	// Apply the damping force to both particles
-	// 	particles[spring.particle1].force += dampingForce;
-	// 	particles[spring.particle2].force -= dampingForce;
-	// 	std::cout << "6\n";
-
-	// }
+	}
 	std::cout<<"Spring forces applied!\n";
 
 	// update position and velocity (according to t) and set force = 0
@@ -129,20 +130,14 @@ void updateScene(float t, vec3* vertices, vec3* normals, std::vector<Particle>& 
 
 	// update vertices and normals accordingly
 	int nv = numParticlesX*numParticlesY;
-	for (int i = 0; i < numParticlesX; i++) {
-		for (int j = 0; j < numParticlesY; j++) {
-			int p = i * numParticlesY + j;
-			vertices[p] = particles[p].position;
-		}
+	for (int p = 0; p < nv; p++) {
+		vertices[p] = particles[p].position;
 	}
 	vertexBuf = r.createVertexAttribs(object, 0, nv, vertices);
 	r.updateVertexAttribs(vertexBuf, nv, vertices);
 
-	for (int i = 0; i < numParticlesX; i++) {
-		for (int j = 0; j < numParticlesY; j++) {
-			int p = i * numParticlesY + j;
-			normals[p] = vec3(0, 0, 1);
-		}
+	for (int p = 0; p < nv; p++) {
+		normals[p] = vec3(0, 0, 1);
 	}
 	normalBuf = r.createVertexAttribs(object, 1, nv, normals);
 	r.updateVertexAttribs(normalBuf, nv, normals);
@@ -248,7 +243,7 @@ std::vector<Particle> setParticles(int numParticlesX, int numParticlesY, float m
 			p.velocity = vec3(0, 0, 0);
 			p.force = vec3(0, 0, 0);
 			p.mass = massDensity*clothWidth*clothHeight/(numParticlesX*numParticlesY);
-			p.isFixed = (i == 0 && j == 0) || (i == numParticlesX-1 && j == numParticlesY-1); // Fix two adjacent corners
+			p.isFixed = (i == 0 && j == 0) || (i == 0 && j == numParticlesY-1); // Fix two adjacent corners
 			particles.push_back(p);
 		}
 	}
