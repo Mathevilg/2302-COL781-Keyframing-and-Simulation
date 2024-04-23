@@ -144,13 +144,6 @@ void updateScene(float t, vec3* vertices, vec3* normals, std::vector<Particle>& 
 	r.updateVertexAttribs(normalBuf, nv, normals);
 }
 
-// Function to compute the squared distance between two particles
-float squaredDistance(const glm::vec3& p1, const glm::vec3& p2) {
-    glm::vec3 diff = p2 - p1;
-    return glm::dot(diff, diff);
-}
-
-// Function to enforce inextensible constraints using position-based dynamics (PBD)
 void enforceConstraints(std::vector<Particle>& particles, const std::vector<Spring>& springs, int iterations) {
     const float epsilon = 1e-6f;
 
@@ -160,115 +153,69 @@ void enforceConstraints(std::vector<Particle>& particles, const std::vector<Spri
         for (const Spring& spring : springs) {
             const Particle& particle1 = particles[spring.particle1];
             const Particle& particle2 = particles[spring.particle2];
-            const float restLengthSq = spring.restLength * spring.restLength;
+			// Calculate the current direction and distance between the particles
+		    glm::vec3 direction = particle2.position - particle1.position;
+		    float distance = glm::length(direction);
+			
+			// Calculate Lambda 
+			float numerator = (distance - spring.restLength) * particle1.mass * particle2.mass;
+			float denominator = (particle1.mass + particle2.mass);
+			float lambda = numerator / denominator;
 
-            // Compute squared current distance between particles
-            float currentDistanceSq = squaredDistance(particle1.position, particle2.position);
-			// std::cout << "currentDistanceSq: " << currentDistanceSq - restLengthSq << "\n";
-            // If the distance is different from the rest length, apply correction
-            if (std::abs(currentDistanceSq - restLengthSq) > epsilon) {
-                // Compute lambda
-                float lambda = (currentDistanceSq - restLengthSq) / (currentDistanceSq + epsilon);
-
-                // Compute change in positions
-                glm::vec3 deltaPos = lambda * (particle1.position - particle2.position);
-
-                // Apply change in positions to both particles
-				if(!particle1.isFixed && !particle2.isFixed){
-                    particles[spring.particle1].position -= deltaPos * 0.5f;
-                    particles[spring.particle2].position += deltaPos * 0.5f;
-				}
-				else if(particle1.isFixed){
-					particles[spring.particle2].position += deltaPos;
-				}
-				else if(particle2.isFixed){
-					particles[spring.particle1].position -= deltaPos;
-				}
-            }
+			if(!particle1.isFixed && !particle2.isFixed){
+				particles[spring.particle1].position += (lambda / particle1.mass) * glm::normalize(direction);
+				particles[spring.particle2].position -= (lambda / particle2.mass) * glm::normalize(direction);
+			}
+			else if(particle1.isFixed){
+				particles[spring.particle2].position -= (distance - spring.restLength) * glm::normalize(direction);
+			}
+			else{
+				particles[spring.particle1].position += (distance - spring.restLength) * glm::normalize(direction);
+			}
         }
 
 	}
 }
 
-// void enforceConstraints(float t, std::vector<Particle>& particles, const std::vector<Spring>& springs, int iterations) {
-//     const float epsilon = 1e-6f;
-
-//     // Perform multiple iterations to satisfy constraints
-//     for (int iter = 0; iter < iterations; ++iter) {
-//         // Iterate over all structural springs
-//         for (const Spring& spring : springs) {
-//             const Particle& particle1 = particles[spring.particle1];
-//             const Particle& particle2 = particles[spring.particle2];
-// 			// Calculate the current direction and distance between the particles
-// 		    glm::vec3 direction = particle2.position - particle1.position;
-// 		    float distance = glm::length(direction);
-
-// 			// Calculate Lambda 
-// 			float numerator = (distance - spring.restLength) * particle1.mass * particle2.mass;
-// 			float denominator = (particle1.mass + particle2.mass);
-// 			float lambda = numerator / denominator;
-// 			// std::cout << "currentDistanceSq: " << currentDistanceSq - restLengthSq << "\n";
-//             // If the distance is different from the rest length, apply correction
-            
-// 			if(!particle1.isFixed && !particle2.isFixed){
-// 				particles[spring.particle1].position += (lambda / particle1.mass) * glm::normalize(direction);
-// 				particles[spring.particle2].position -= (lambda / particle2.mass) * glm::normalize(direction);
-// 			}
-// 			else if(particle1.isFixed){
-// 				particles[spring.particle2].position -= distance;
-// 			}
-// 			else{
-// 				particles[spring.particle1].position += distance;
-// 			}
-
-//         }
-
-// 	}
-// }
-
 
 // Updated updateScene function incorporating PBD with inextensible constraints
 void updateScenePBD(float t, vec3* vertices, vec3* normals, std::vector<Particle>& particles, std::vector<Spring> springs, int numParticlesX, int numParticlesY) {
     // Apply gravity to particles
-    for (Particle& particle : particles) {
-        if (!particle.isFixed) {
-            particle.force += vec3(0, 0, -9.8) * particle.mass;
-        }
-    }
-
-    // Apply spring forces (shear and bending springs)
-    for (const Spring& spring : springs) {
+    for (int i = 0; i < particles.size(); i++) {
+		if (!particles[i].isFixed) {
+			particles[i].force += vec3(0, 0, -9.8) * particles[i].mass; // Apply gravity
+		}
+	}
+	// std::cout<<"Gravity applied!\n";
+	// apply spring forces
+	for (const Spring& spring : springs) {
 		const Particle& particle1 = particles[spring.particle1];
 		const Particle& particle2 = particles[spring.particle2];
-		// std::cout << "1\n";
+
 		// Calculate the direction and distance between the particles
 		glm::vec3 direction = particle2.position - particle1.position;
 		float distance = glm::length(direction);
-		// std::cout << "2\n";
+
 		if(spring.isExtensible){
 		    // Calculate the spring force
 		    glm::vec3 force = -spring.stiffness * (distance - spring.restLength) * glm::normalize(direction);
-		    // std::cout << "3\n";
-		    // std::cout << "distance: " << distance << "\n";
-		    // std::cout << "restLength: " << spring.restLength << "\n";
+    
 		    // Apply the spring force to both particles
 		    particles[spring.particle1].force -= force;
 		    particles[spring.particle2].force += force;
-		    // std::cout << "4\n";
 		}
 
 
 		// Apply damping force
 		glm::vec3 relativeVelocity = particle2.velocity - particle1.velocity;
 		glm::vec3 dampingForce = -spring.damping * glm::dot(relativeVelocity, direction) / distance * glm::normalize(direction);
-		// std::cout << "5\n";
 
 		// Apply the damping force to both particles
 		particles[spring.particle1].force -= dampingForce;
 		particles[spring.particle2].force += dampingForce;
-		std::cout << "6\n";
 
 	}
+	// std::cout<<"Spring forces applied!\n";
 
 	// update position and velocity (according to t) and set force = 0
 	for (int i = 0; i < particles.size(); i++) {
@@ -279,9 +226,9 @@ void updateScenePBD(float t, vec3* vertices, vec3* normals, std::vector<Particle
 			// Reset force to zero
 			particles[i].force = glm::vec3(0.0f);
 		}
-		// else std::cout << "Particle " << i << " is fixed\n";
+		else std::cout << "Particle " << i << " is fixed\n";
 	}
-	std::cout<<"Positions and Velocities updated!\n";
+	
 
     // Update particle positions using PBD with inextensible constraints
     enforceConstraints(particles, springs, 10); // Perform 10 iterations of constraint satisfaction
@@ -426,8 +373,8 @@ int main() {
 
 	float clothWidth = 5.0f;
 	float clothHeight = 5.0f;
-	int numParticlesX = 4;
-	int numParticlesY = 3;
+	int numParticlesX = 5;
+	int numParticlesY = 6;
 	float massDensity = 1.0f;
 	float structuralStiffness = 100.0f;
 	float shearStiffness = 50.0f;
@@ -454,11 +401,12 @@ int main() {
 
 	// set vertices, normals and triangles for the cloth according to the particles
 	initializeScene(vertices, normals, triangles, particles, numParticlesX, numParticlesY);
-
+	bool flag = true;
 	while (!r.shouldQuit()) {
         float t = 1e-3;
 		// updateScene(t, vertices, normals, particles, springs, numParticlesX, numParticlesY);
 		updateScenePBD(t, vertices, normals, particles, springs, numParticlesX, numParticlesY);
+		
 		// print vertices
 		// for (int i = 0; i < nv; i++) {
 		// 	std::cout << "Vertex " << i << " position: " << vertices[i].x << " " << vertices[i].y << " " << vertices[i].z << std::endl;

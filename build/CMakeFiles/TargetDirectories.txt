@@ -1,4 +1,0 @@
-/home/tanish-tst/Documents/COL781/A4/build/CMakeFiles/col781.dir
-/home/tanish-tst/Documents/COL781/A4/build/CMakeFiles/animation.dir
-/home/tanish-tst/Documents/COL781/A4/build/CMakeFiles/edit_cache.dir
-/home/tanish-tst/Documents/COL781/A4/build/CMakeFiles/rebuild_cache.dir

@@ -1,2 +1,0 @@
-/usr/bin/ar qc libcol781.a CMakeFiles/col781.dir/src/hw.cpp.o CMakeFiles/col781.dir/src/camera.cpp.o CMakeFiles/col781.dir/deps/src/gl.c.o
-/usr/bin/ranlib libcol781.a
